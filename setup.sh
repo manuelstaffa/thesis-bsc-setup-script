@@ -211,7 +211,7 @@ echo "\`\`\`" >> "$README_PATH"
 echo "" >> "$README_PATH"
 
 # HackAtari usage
-if [ "$CLONE_HACKATARI" = true ]; then
+if [ "$DO_HACKATARI" = true ]; then
 echo "## HackAtari" >> "$README_PATH"
 echo "\`\`\`bash" >> "$README_PATH"
 echo "cd \$BASE_DIR/HackAtari/scripts" >> "$README_PATH"
@@ -221,7 +221,7 @@ echo "" >> "$README_PATH"
 fi
 
 # OC_Atari usage
-#if [ "$CLONE_OCATARI" = true ]; then
+#if [ "$DO_OCATARI" = true ]; then
 #echo "## OC_Atari (manual testing)" >> "$README_PATH"
 #echo "\`\`\`bash" >> "$README_PATH"
 #echo "cd \$BASE_DIR/OC_Atari" >> "$README_PATH"
@@ -231,7 +231,7 @@ fi
 #fi
 
 # oc_cleanrl usage
-#if [ "$CLONE_CLEANRL" = true ]; then
+#if [ "$DO_CLEANRL" = true ]; then
 #echo "## OC_CleanRL (RL training/evaluation)" >> "$README_PATH"
 #echo "\`\`\`bash" >> "$README_PATH"
 #echo "cd \$BASE_DIR/oc_cleanrl" >> "$README_PATH"
@@ -265,11 +265,11 @@ echo "++++++++++Setup complete++++++++++"
 echo "Logs saved to: $LOG_FILE"
 echo
 echo "To activate this environment, use:"
-echo    "$ conda activate $ENV_NAME"
+echo "  $ conda activate $ENV_NAME"
 echo
 echo "To deactivate an active environment, use"
 echo
-echo    "$ conda deactivate"
+echo "  $ conda deactivate"
 
 
 
