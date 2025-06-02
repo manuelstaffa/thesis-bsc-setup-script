@@ -1,4 +1,4 @@
-# Automatic Bash Setup Script 'LLM-assisted Reward Shaping in Object-centric Environments'
+# Automatic Setup Script 'LLM-assisted Reward Shaping in Object-centric Environments'
 
 Automatic modular setup script for the thesis project 'LLM-assisted Reward Shaping in Object-centric Environments'
 
