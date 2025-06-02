@@ -55,70 +55,15 @@ echo "All required dependencies are present."
 
 # --- Configuration prompts
 echo
-echo "++++++++++Setup Configuration++++++++++"
+echo "++++++++++Project Path Configuration++++++++++"
 
-read -p "Enter directory to initialize projects (default: current dir): " BASE_DIR
+read -p "Enter directory to initialize projects (default: current directory ['$(basename "$PWD")' at path '$(realpath "$PWD")']): " BASE_DIR
 BASE_DIR=${BASE_DIR:-$(pwd)}
 
-read -p "Use Conda or venv for environment management? (conda/venv, default: conda): " ENV_TOOL
-ENV_TOOL=${ENV_TOOL:-conda}
-ENV_TOOL=$(echo "$ENV_TOOL" | tr '[:upper:]' '[:lower:]')
-
-if [ "$ENV_TOOL" = "conda" ]; then
-    if ! command -v conda &> /dev/null; then
-        echo "Error: Conda not found. Please install it or choose venv."
-        exit 1
-    fi
-    read -p "Enter Python version (default: 3.10): " PYVER
-    PYVER=${PYVER:-3.10}
-    read -p "Enter Conda environment name (default: myenv): " ENV_NAME
-    ENV_NAME=${ENV_NAME:-myenv}
-    if conda env list | grep -w "$ENV_NAME" &> /dev/null; then
-        echo "Conda environment '$ENV_NAME' already exists."
-        if ask_no_default "Delete and recreate it?"; then
-            conda remove -n "$ENV_NAME" --all -y
-        else
-            echo "Aborting."
-            exit 1
-        fi
-    fi
-    conda create -n "$ENV_NAME" python="$PYVER" -y
-    PIP="conda run -n $ENV_NAME pip"
-    PYTHON="conda run -n $ENV_NAME python"
-elif [ "$ENV_TOOL" = "venv" ]; then
-    read -p "Enter venv directory name (default: .venv): " VENV_DIR
-    VENV_DIR=${VENV_DIR:-.venv}
-    if [ -d "$BASE_DIR/$VENV_DIR" ]; then
-        echo "Venv '$VENV_DIR' already exists."
-        if ask_no_default "Delete and recreate it?"; then
-            rm -rf "$BASE_DIR/$VENV_DIR"
-        else
-            echo "Aborting."
-            exit 1
-        fi
-    fi
-    python -m venv "$BASE_DIR/$VENV_DIR"
-    source "$BASE_DIR/$VENV_DIR/bin/activate"
-    PIP="pip"
-    PYTHON="python"
-else
-    echo "Invalid environment tool selection."
-    exit 1
-fi
-
-ask_yes_default "Install ale_py, gymnasium[atari], AutoROM?" && DO_ATARI_PKGS=true || DO_ATARI_PKGS=false
-ask_yes_default "Install HackAtari?" && DO_HACKATARI=true || DO_HACKATARI=false
-ask_yes_default "Install OC_Atari?" && DO_OCATARI=true || DO_OCATARI=false
-ask_yes_default "Install oc_cleanrl?" && DO_OCCLEANRL=true || DO_OCCLEANRL=false
-ask_no_default "Install PyTorch with ROCm (AMD GPU support)?" && USE_ROCM=true || USE_ROCM=false
-
-echo
-echo "++++++++++Starting setup++++++++++"
-mkdir -p "$BASE_DIR"
-cd "$BASE_DIR" || exit
-
-# --- Clean directory
+# --- Clean directory before continuing
 if [ "$(ls -A "$BASE_DIR")" ]; then
+    echo
+    echo "++++++++++Directory Cleanup++++++++++"
     echo "Directory '$BASE_DIR' is not empty."
     if ask_no_default "Delete all contents of '$BASE_DIR' except this script, README.md, and log file?"; then
         SCRIPT_PATH="$(realpath "$0")"
@@ -137,6 +82,72 @@ if [ "$(ls -A "$BASE_DIR")" ]; then
         echo "Aborting setup to avoid overwriting files."
         exit 1
     fi
+fi
+
+echo
+echo "++++++++++Virtual Environemnt Configuration++++++++++"
+read -p "Use Conda or venv for environment management? (conda/venv, default: conda): " ENV_TOOL
+ENV_TOOL=${ENV_TOOL:-conda}
+ENV_TOOL=$(echo "$ENV_TOOL" | tr '[:upper:]' '[:lower:]')
+
+if [ "$ENV_TOOL" = "conda" ]; then
+    if ! command -v conda &> /dev/null; then
+        echo "Error: Conda not found. Please install it or choose venv."
+        exit 1
+    fi
+    read -p "Enter Python version (default: 3.10): " PYVER
+    PYVER=${PYVER:-3.10}
+    read -p "Enter Conda environment name (default: myenv): " ENV_NAME
+    ENV_NAME=${ENV_NAME:-myenv}
+elif [ "$ENV_TOOL" = "venv" ]; then
+    read -p "Enter venv directory name (default: .venv): " VENV_DIR
+    VENV_DIR=${VENV_DIR:-.venv}
+else
+    echo "Invalid environment tool selection."
+    exit 1
+fi
+
+echo
+echo "++++++++++Component Configuartion++++++++++"
+ask_yes_default "Install ale_py, gymnasium[atari], AutoROM?" && DO_ATARI_PKGS=true || DO_ATARI_PKGS=false
+ask_yes_default "Install HackAtari?" && DO_HACKATARI=true || DO_HACKATARI=false
+ask_yes_default "Install OC_Atari?" && DO_OCATARI=true || DO_OCATARI=false
+ask_yes_default "Install oc_cleanrl?" && DO_OCCLEANRL=true || DO_OCCLEANRL=false
+ask_no_default "Install PyTorch with ROCm (AMD GPU support)?" && USE_ROCM=true || USE_ROCM=false
+
+echo
+echo "++++++++++Starting setup++++++++++"
+mkdir -p "$BASE_DIR"
+cd "$BASE_DIR" || exit
+
+# --- Environment setup
+if [ "$ENV_TOOL" = "conda" ]; then
+    if conda env list | grep -w "$ENV_NAME" &> /dev/null; then
+        echo "Conda environment '$ENV_NAME' already exists."
+        if ask_no_default "Delete and recreate it?"; then
+            conda remove -n "$ENV_NAME" --all -y
+        else
+            echo "Aborting."
+            exit 1
+        fi
+    fi
+    conda create -n "$ENV_NAME" python="$PYVER" -y
+    PIP="conda run -n $ENV_NAME pip"
+    PYTHON="conda run -n $ENV_NAME python"
+elif [ "$ENV_TOOL" = "venv" ]; then
+    if [ -d "$BASE_DIR/$VENV_DIR" ]; then
+        echo "Venv '$VENV_DIR' already exists."
+        if ask_no_default "Delete and recreate it?"; then
+            rm -rf "$BASE_DIR/$VENV_DIR"
+        else
+            echo "Aborting."
+            exit 1
+        fi
+    fi
+    python -m venv "$BASE_DIR/$VENV_DIR"
+    source "$BASE_DIR/$VENV_DIR/bin/activate"
+    PIP="pip"
+    PYTHON="python"
 fi
 
 # --- Install base packages
@@ -182,7 +193,12 @@ ln -sfn "$BASE_DIR/HackAtari" "$BASE_DIR/oc_cleanrl/submodules/HackAtari"
 
 # --- AutoROM
 if [ "$DO_ATARI_PKGS" = true ]; then
-    $PYTHON -m AutoROM --accept-license
+    if [ "$ENV_TOOL" = "conda" ]; then
+        conda run -n "$ENV_NAME" AutoROM --accept-license
+    else
+        # For venv, the env should be already activated at this point, so just run AutoROM
+        AutoROM --accept-license
+    fi
 fi
 
 # --- README
@@ -243,9 +259,9 @@ echo "  $ conda deactivate"
 elif [ "$ENV_TOOL" = "venv" ]; then
 echo "To activate this environment, use:"
 echo
-echo "  $ source \"$ENV_NAME/bin/activate\""
+echo "  source \"$VENV_DIR/bin/activate\""
 echo
 echo "To deactivate an active environment, use:"
 echo
-echo "  $ deactivate"
+echo "  deactivate"
 fi
