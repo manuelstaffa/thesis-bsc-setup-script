@@ -247,6 +247,12 @@ echo "cd HackAtari/scripts" >> "$README_PATH"
 echo "python run.py -g Freeway" >> "$README_PATH"
 echo "\`\`\`" >> "$README_PATH"
 
+echo "## oc_cleanrl" >> "$README_PATH"
+echo "\`\`\`bash" >> "$README_PATH"
+echo "cd oc_cleanrl" >> "$README_PATH"
+echo "python cleanrl/ppo_atari_oc.py --env-id ALE/Pong-v5 --obs_mode obj --architecture PPO_OBJ --backend OCAtari" >> "$README_PATH"
+echo "\`\`\`" >> "$README_PATH"
+
 echo "## ALE & Gymnasium Test" >> "$README_PATH"
 echo "\`\`\`bash" >> "$README_PATH"
 echo "python -m ale_py.example" >> "$README_PATH"
