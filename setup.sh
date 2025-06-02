@@ -45,6 +45,7 @@ clone_repo() {
 echo
 echo "++++++++++Prerequisites++++++++++"
 
+# sudo dnf install python3-devel
 echo "Checking dependencies..."
 for dep in git python; do
     if ! command -v $dep &> /dev/null; then
@@ -156,7 +157,10 @@ fi
 
 # --- Install base packages
 if [ "$DO_ATARI_PKGS" = true ]; then
+    #AUTOROM="$BASE_DIR/$VENV_DIR/bin/AutoROM"
     $PIP install ale_py "gymnasium[atari]"
+    $PIP install AutoROM
+    #$AUTOROM --accept-license
 fi
 
 # --- HackAtari
@@ -200,7 +204,9 @@ if [ "$DO_ATARI_PKGS" = true ]; then
     if [ "$ENV_TOOL" = "conda" ]; then
         conda run -n "$ENV_NAME" AutoROM --accept-license
     else
+        source "$VENV_DIR/bin/activate"
         AutoROM --accept-license
+        deactivate
     fi
 fi
 
