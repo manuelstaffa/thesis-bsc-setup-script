@@ -44,6 +44,7 @@ clone_repo() {
 # --- Dependency checks
 echo
 echo "++++++++++Prerequisites++++++++++"
+
 echo "Checking dependencies..."
 for dep in git python; do
     if ! command -v $dep &> /dev/null; then
@@ -65,7 +66,7 @@ if [ "$(ls -A "$BASE_DIR")" ]; then
     echo
     echo "++++++++++Directory Cleanup++++++++++"
     echo "Directory '$BASE_DIR' is not empty."
-    if ask_no_default "Delete all contents of '$BASE_DIR' except this script, README.md, and log file?"; then
+    if ask_no_default "Delete all contents of '$BASE_DIR' except this script and log file?"; then
         SCRIPT_PATH="$(realpath "$0")"
         LOGFILE="$BASE_DIR/setup.log"
         README="$BASE_DIR/README.md"
@@ -73,7 +74,7 @@ if [ "$(ls -A "$BASE_DIR")" ]; then
         for item in "$BASE_DIR"/* "$BASE_DIR"/.*; do
             [ "$item" = "$BASE_DIR/." ] || [ "$item" = "$BASE_DIR/.." ] && continue
             [ "$(realpath "$item")" = "$SCRIPT_PATH" ] && continue
-            [ "$item" = "$README" ] && continue
+            #[ "$item" = "$README" ] && continue
             [ "$item" = "$LOGFILE" ] && continue
             rm -rf "$item"
         done
@@ -86,6 +87,7 @@ fi
 
 echo
 echo "++++++++++Virtual Environemnt Configuration++++++++++"
+
 read -p "Use Conda or venv for environment management? (conda/venv, default: conda): " ENV_TOOL
 ENV_TOOL=${ENV_TOOL:-conda}
 ENV_TOOL=$(echo "$ENV_TOOL" | tr '[:upper:]' '[:lower:]')
@@ -109,6 +111,7 @@ fi
 
 echo
 echo "++++++++++Component Configuartion++++++++++"
+
 ask_yes_default "Install ale_py, gymnasium[atari], AutoROM?" && DO_ATARI_PKGS=true || DO_ATARI_PKGS=false
 ask_yes_default "Install HackAtari?" && DO_HACKATARI=true || DO_HACKATARI=false
 ask_yes_default "Install OC_Atari?" && DO_OCATARI=true || DO_OCATARI=false
@@ -117,6 +120,7 @@ ask_no_default "Install PyTorch with ROCm (AMD GPU support)?" && USE_ROCM=true |
 
 echo
 echo "++++++++++Starting setup++++++++++"
+
 mkdir -p "$BASE_DIR"
 cd "$BASE_DIR" || exit
 
@@ -196,12 +200,14 @@ if [ "$DO_ATARI_PKGS" = true ]; then
     if [ "$ENV_TOOL" = "conda" ]; then
         conda run -n "$ENV_NAME" AutoROM --accept-license
     else
-        # For venv, the env should be already activated at this point, so just run AutoROM
         AutoROM --accept-license
     fi
 fi
 
 # --- README
+echo
+echo "++++++++++Creating README++++++++++"
+
 README_PATH="$BASE_DIR/README.md"
 echo "# Setup Summary & Useful Commands" > "$README_PATH"
 echo "" >> "$README_PATH"
@@ -211,6 +217,8 @@ echo "## Conda" >> "$README_PATH"
 echo "\`\`\`bash" >> "$README_PATH"
 echo "conda activate $ENV_NAME" >> "$README_PATH"
 echo "conda deactivate" >> "$README_PATH"
+echo >> "$README_PATH"
+echo "conda env remove --name $ENV_NAME" >> "$README_PATH"
 echo "\`\`\`" >> "$README_PATH"
 elif [ "$ENV_TOOL" = "venv" ]; then
 echo "## venv" >> "$README_PATH"
@@ -245,6 +253,7 @@ echo "Setup complete. Logs saved to: $LOG_FILE"
 # --- Completion
 echo
 echo "++++++++++Setup complete++++++++++"
+
 echo "Logs saved to: $LOG_FILE"
 echo
 
