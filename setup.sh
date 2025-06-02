@@ -63,20 +63,24 @@ read -p "Enter directory to initialize projects (default: current directory ['$(
 BASE_DIR=${BASE_DIR:-$(pwd)}
 
 # --- Clean directory before continuing
-if [ "$(ls -A "$BASE_DIR")" ]; then
+SCRIPT_PATH="$(realpath "$0")"
+LOGFILE="$BASE_DIR/setup.log"
+
+FILES_TO_DELETE=()
+for item in "$BASE_DIR"/* "$BASE_DIR"/.*; do
+    [ "$item" = "$BASE_DIR/." ] || [ "$item" = "$BASE_DIR/.." ] && continue
+    [ "$(realpath "$item")" = "$SCRIPT_PATH" ] && continue
+    [ "$(realpath "$item")" = "$LOGFILE" ] && continue
+    FILES_TO_DELETE+=("$item")
+done
+
+if [ "${#FILES_TO_DELETE[@]}" -gt 0 ]; then
     echo
     echo "++++++++++Directory Cleanup++++++++++"
-    echo "Directory '$BASE_DIR' is not empty."
-    if ask_no_default "Delete all contents of '$BASE_DIR' except this script and log file?"; then
-        SCRIPT_PATH="$(realpath "$0")"
-        LOGFILE="$BASE_DIR/setup.log"
-        README="$BASE_DIR/README.md"
 
-        for item in "$BASE_DIR"/* "$BASE_DIR"/.*; do
-            [ "$item" = "$BASE_DIR/." ] || [ "$item" = "$BASE_DIR/.." ] && continue
-            [ "$(realpath "$item")" = "$SCRIPT_PATH" ] && continue
-            #[ "$item" = "$README" ] && continue
-            [ "$item" = "$LOGFILE" ] && continue
+    echo "Directory '$BASE_DIR' is not empty."
+    if ask_no_default "Delete all contents of '$BASE_DIR' except this script?"; then
+        for item in "${FILES_TO_DELETE[@]}"; do
             rm -rf "$item"
         done
         echo "Directory cleared."
