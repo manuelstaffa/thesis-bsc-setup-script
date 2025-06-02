@@ -41,33 +41,69 @@ clone_repo() {
     fi
 }
 
-# --- 0. Dependency checks
+# --- Dependency checks
 echo
 echo "++++++++++Prerequisites++++++++++"
 echo "Checking dependencies..."
-for dep in git conda python; do
+for dep in git python; do
     if ! command -v $dep &> /dev/null; then
-        echo "❌ Error: $dep is not installed or not in PATH."
+        echo "Error: $dep is not installed or not in PATH."
         exit 1
     fi
 done
 echo "All required dependencies are present."
 
-# --- 0. Configuration prompts
+# --- Configuration prompts
 echo
 echo "++++++++++Setup Configuration++++++++++"
 
 read -p "Enter directory to initialize projects (default: current dir): " BASE_DIR
 BASE_DIR=${BASE_DIR:-$(pwd)}
 
-if ask_yes_default "Create a new Conda environment?"; then
+read -p "Use Conda or venv for environment management? (conda/venv, default: conda): " ENV_TOOL
+ENV_TOOL=${ENV_TOOL:-conda}
+ENV_TOOL=$(echo "$ENV_TOOL" | tr '[:upper:]' '[:lower:]')
+
+if [ "$ENV_TOOL" = "conda" ]; then
+    if ! command -v conda &> /dev/null; then
+        echo "Error: Conda not found. Please install it or choose venv."
+        exit 1
+    fi
     read -p "Enter Python version (default: 3.10): " PYVER
     PYVER=${PYVER:-3.10}
-    read -p "Enter environment name (default: myenv): " ENV_NAME
+    read -p "Enter Conda environment name (default: myenv): " ENV_NAME
     ENV_NAME=${ENV_NAME:-myenv}
-    CREATE_ENV=true
+    if conda env list | grep -w "$ENV_NAME" &> /dev/null; then
+        echo "Conda environment '$ENV_NAME' already exists."
+        if ask_no_default "Delete and recreate it?"; then
+            conda remove -n "$ENV_NAME" --all -y
+        else
+            echo "Aborting."
+            exit 1
+        fi
+    fi
+    conda create -n "$ENV_NAME" python="$PYVER" -y
+    PIP="conda run -n $ENV_NAME pip"
+    PYTHON="conda run -n $ENV_NAME python"
+elif [ "$ENV_TOOL" = "venv" ]; then
+    read -p "Enter venv directory name (default: .venv): " VENV_DIR
+    VENV_DIR=${VENV_DIR:-.venv}
+    if [ -d "$BASE_DIR/$VENV_DIR" ]; then
+        echo "Venv '$VENV_DIR' already exists."
+        if ask_no_default "Delete and recreate it?"; then
+            rm -rf "$BASE_DIR/$VENV_DIR"
+        else
+            echo "Aborting."
+            exit 1
+        fi
+    fi
+    python -m venv "$BASE_DIR/$VENV_DIR"
+    source "$BASE_DIR/$VENV_DIR/bin/activate"
+    PIP="pip"
+    PYTHON="python"
 else
-    CREATE_ENV=false
+    echo "Invalid environment tool selection."
+    exit 1
 fi
 
 ask_yes_default "Install ale_py, gymnasium[atari], AutoROM?" && DO_ATARI_PKGS=true || DO_ATARI_PKGS=false
@@ -81,7 +117,7 @@ echo "++++++++++Starting setup++++++++++"
 mkdir -p "$BASE_DIR"
 cd "$BASE_DIR" || exit
 
-# --- 1. Check directory cleanliness
+# --- Clean directory
 if [ "$(ls -A "$BASE_DIR")" ]; then
     echo "Directory '$BASE_DIR' is not empty."
     if ask_no_default "Delete all contents of '$BASE_DIR' except this script, README.md, and log file?"; then
@@ -90,187 +126,126 @@ if [ "$(ls -A "$BASE_DIR")" ]; then
         README="$BASE_DIR/README.md"
 
         for item in "$BASE_DIR"/* "$BASE_DIR"/.*; do
-            # Skip . and ..
             [ "$item" = "$BASE_DIR/." ] || [ "$item" = "$BASE_DIR/.." ] && continue
-
-            # Skip script itself
             [ "$(realpath "$item")" = "$SCRIPT_PATH" ] && continue
-
-            # Skip README.md
             [ "$item" = "$README" ] && continue
-
-            # Skip log file
             [ "$item" = "$LOGFILE" ] && continue
-
             rm -rf "$item"
         done
-        echo "Directory cleared (script, README.md, and log file preserved)."
+        echo "Directory cleared."
     else
-        echo "Aborting setup to avoid overwriting existing files."
+        echo "Aborting setup to avoid overwriting files."
         exit 1
     fi
 fi
 
-# --- 2. Conda env
-if [ "$CREATE_ENV" = true ]; then
-    if conda env list | grep -w "$ENV_NAME" &> /dev/null; then
-        echo "A Conda environment named \"$ENV_NAME\" already exists."
-        if ask_no_default "Delete and recreate it?"; then
-            conda remove -n "$ENV_NAME" --all -y
-            echo "Deleted existing environment."
-        else
-            echo "Setup aborted. Please use a different environment name."
-            exit 1
-        fi
-    fi
-    echo "Creating environment '$ENV_NAME' with Python $PYVER..."
-    conda create -n "$ENV_NAME" python="$PYVER" -y
-fi
-
-# --- 3. Atari packages
+# --- Install base packages
 if [ "$DO_ATARI_PKGS" = true ]; then
-    echo "Installing ale_py, gymnasium[atari], AutoROM..."
-    conda run -n "$ENV_NAME" pip install ale_py
-    conda run -n "$ENV_NAME" pip install "gymnasium[atari]"
-    # conda run -n "$ENV_NAME" AutoROM --accept-license
+    $PIP install ale_py "gymnasium[atari]"
 fi
 
-# --- 4. HackAtari
+# --- HackAtari
 if [ "$DO_HACKATARI" = true ]; then
-    echo "Cloning & installing HackAtari..."
     clone_repo "git@github.com:k4ntz/HackAtari.git" "https://github.com/k4ntz/HackAtari.git" "HackAtari"
-    cd HackAtari || exit
-    conda run -n "$ENV_NAME" pip install -e .
+    cd HackAtari
+    $PIP install -e .
     cd ..
 fi
 
-# --- 5. OC_Atari
+# --- OC_Atari
 if [ "$DO_OCATARI" = true ]; then
-    echo "Cloning & installing OC_Atari..."
     clone_repo "git@github.com:k4ntz/OC_Atari.git" "https://github.com/k4ntz/OC_Atari.git" "OC_Atari"
-    cd OC_Atari || exit
-    conda run -n "$ENV_NAME" pip install -e .
-    conda run -n "$ENV_NAME" pip install -r requirements.txt
+    cd OC_Atari
+    $PIP install -e .
+    $PIP install -r requirements.txt
     cd ..
 fi
 
-# --- 6. oc_cleanrl
+# --- oc_cleanrl
 if [ "$DO_OCCLEANRL" = true ]; then
-    echo "Cloning & installing oc_cleanrl..."
     clone_repo "git@github.com:BluemlJ/oc_cleanrl.git" "https://github.com/BluemlJ/oc_cleanrl.git" "oc_cleanrl"
-    cd oc_cleanrl || exit
-    #cd submodules/OC_Atari || exit
-    #conda run -n "$ENV_NAME" pip install -e .
-    #cd ../..
-    conda run -n "$ENV_NAME" pip install -r requirements/requirements.txt
-    conda run -n "$ENV_NAME" pip install -r requirements/requirements-atari.txt
+    cd oc_cleanrl
+    $PIP install -r requirements/requirements.txt
+    $PIP install -r requirements/requirements-atari.txt
     cd ..
 fi
 
-# --- 7. AMD GPU ROCm support
+# --- ROCm
 if [ "$USE_ROCM" = true ]; then
-    #echo "Reading torch version from oc_cleanrl/requirements/requirements.txt..."
-    #TORCH_VER=$(grep -E "^torch==[0-9]+\.[0-9]+\.[0-9]+" "$BASE_DIR/oc_cleanrl/requirements/requirements.txt" | head -n 1 | cut -d'=' -f3)
-    #if [ -z "$TORCH_VER" ]; then
-    #    echo "Could not find torch version in requirements file. Aborting ROCm installation."
-    #    exit 1
-    #fi
-    #echo "Installing torch==$TORCH_VER with ROCm..."
-    #conda run -n "$ENV_NAME" pip install "torch==$TORCH_VER+rocm5.6" "torchvision==0.16.2+rocm5.6" "torchaudio==$TORCH_VER" --index-url https://download.pytorch.org/whl/rocm5.6
-    echo "Installing torch with ROCm..."
-    conda run -n "$ENV_NAME" pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/rocm6.3
+    $PIP install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/rocm6.3
 fi
 
-# --- 8. Link OC_Atari and HackAtari into oc_cleanrl/submodules
-echo "Creating hard links to OC_Atari and HackAtari in oc_cleanrl/submodules..."
+# --- Symlink submodules
 mkdir -p "$BASE_DIR/oc_cleanrl/submodules"
-
 ln -sfn "$BASE_DIR/OC_Atari" "$BASE_DIR/oc_cleanrl/submodules/OC_Atari"
 ln -sfn "$BASE_DIR/HackAtari" "$BASE_DIR/oc_cleanrl/submodules/HackAtari"
 
-# --- 8. Atutorom accept
+# --- AutoROM
 if [ "$DO_ATARI_PKGS" = true ]; then
-    echo "Accepting AutoROM license..."
-    conda run -n "$ENV_NAME" AutoROM --accept-license
+    $PYTHON -m AutoROM --accept-license
 fi
 
-# --- Readme
-echo
-echo "++++++++++Creating README++++++++++"
+# --- README
 README_PATH="$BASE_DIR/README.md"
-
 echo "# Setup Summary & Useful Commands" > "$README_PATH"
 echo "" >> "$README_PATH"
 
-# Conda usage
+if [ "$ENV_TOOL" = "conda" ]; then
 echo "## Conda" >> "$README_PATH"
 echo "\`\`\`bash" >> "$README_PATH"
 echo "conda activate $ENV_NAME" >> "$README_PATH"
 echo "conda deactivate" >> "$README_PATH"
 echo "\`\`\`" >> "$README_PATH"
-echo "" >> "$README_PATH"
-
-# HackAtari usage
-if [ "$DO_HACKATARI" = true ]; then
-echo "## HackAtari" >> "$README_PATH"
+elif [ "$ENV_TOOL" = "venv" ]; then
+echo "## venv" >> "$README_PATH"
 echo "\`\`\`bash" >> "$README_PATH"
-echo "cd \$BASE_DIR/HackAtari/scripts" >> "$README_PATH"
-echo "python run.py -g Freeway -r rewardfunc_path  # or Frostbite, Alien, etc." >> "$README_PATH"
+echo "source $VENV_DIR/bin/activate" >> "$README_PATH"
+echo "deactivate" >> "$README_PATH"
 echo "\`\`\`" >> "$README_PATH"
-echo "" >> "$README_PATH"
 fi
 
-# OC_Atari usage
-#if [ "$DO_OCATARI" = true ]; then
-#echo "## OC_Atari (manual testing)" >> "$README_PATH"
-#echo "\`\`\`bash" >> "$README_PATH"
-#echo "cd \$BASE_DIR/OC_Atari" >> "$README_PATH"
-#echo "python -m ocatari.play" >> "$README_PATH"
-#echo "\`\`\`" >> "$README_PATH"
-#echo "" >> "$README_PATH"
-#fi
+echo "" >> "$README_PATH"
+echo "## HackAtari" >> "$README_PATH"
+echo "\`\`\`bash" >> "$README_PATH"
+echo "cd HackAtari/scripts" >> "$README_PATH"
+echo "python run.py -g Freeway" >> "$README_PATH"
+echo "\`\`\`" >> "$README_PATH"
 
-# oc_cleanrl usage
-#if [ "$DO_CLEANRL" = true ]; then
-#echo "## OC_CleanRL (RL training/evaluation)" >> "$README_PATH"
-#echo "\`\`\`bash" >> "$README_PATH"
-#echo "cd \$BASE_DIR/oc_cleanrl" >> "$README_PATH"
-#echo "python train.py --env-id ALE/Freeway-v5" >> "$README_PATH"
-#echo "\`\`\`" >> "$README_PATH"
-#echo "" >> "$README_PATH"
-#fi
-
-# ALE/Gymnasium
-echo "## ALE & Gymnasium Testing" >> "$README_PATH"
+echo "## ALE & Gymnasium Test" >> "$README_PATH"
 echo "\`\`\`bash" >> "$README_PATH"
 echo "python -m ale_py.example" >> "$README_PATH"
 echo "python -c \"import gymnasium; print(gymnasium.make('ALE/Freeway-v5'))\"" >> "$README_PATH"
 echo "\`\`\`" >> "$README_PATH"
-echo "" >> "$README_PATH"
 
-# ROCm if installed
 if [ "$USE_ROCM" = true ]; then
-echo "## AMD ROCm Torch Check" >> "$README_PATH"
+echo "## ROCm Torch Test" >> "$README_PATH"
 echo "\`\`\`bash" >> "$README_PATH"
 echo "python -c \"import torch; print(torch.version.__version__, torch.cuda.is_available())\"" >> "$README_PATH"
 echo "\`\`\`" >> "$README_PATH"
-echo "" >> "$README_PATH"
 fi
 
-echo "✅ README.md created at: $README_PATH"
+echo "Setup complete. Logs saved to: $LOG_FILE"
 
 # --- Completion
 echo
 echo "++++++++++Setup complete++++++++++"
 echo "Logs saved to: $LOG_FILE"
 echo
+
+if [ "$ENV_TOOL" = "conda" ]; then
 echo "To activate this environment, use:"
+echo
 echo "  $ conda activate $ENV_NAME"
 echo
 echo "To deactivate an active environment, use"
 echo
 echo "  $ conda deactivate"
-
-
-
-
+elif [ "$ENV_TOOL" = "venv" ]; then
+echo "To activate this environment, use:"
+echo
+echo "  $ source \"$ENV_NAME/bin/activate\""
+echo
+echo "To deactivate an active environment, use:"
+echo
+echo "  $ deactivate"
+fi
