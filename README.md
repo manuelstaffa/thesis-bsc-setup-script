@@ -19,7 +19,7 @@ Requirements
 3. Conda (when using conda)
 4. python3-devel (when using .venv)
 
-Usage
+How To Use
 ---
 1. Place script in target folder (or any other folder)
 2. Run ```bash path/to/setup.sh```
