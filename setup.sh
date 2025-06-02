@@ -218,6 +218,8 @@ fi
 echo
 echo "++++++++++Creating README++++++++++"
 
+echo "Creating README.md..."
+
 README_PATH="$BASE_DIR/README.md"
 echo "# Setup Summary & Useful Commands" > "$README_PATH"
 echo "" >> "$README_PATH"
@@ -257,8 +259,6 @@ echo "\`\`\`bash" >> "$README_PATH"
 echo "python -c \"import torch; print(torch.version.__version__, torch.cuda.is_available())\"" >> "$README_PATH"
 echo "\`\`\`" >> "$README_PATH"
 fi
-
-echo "Setup complete. Logs saved to: $LOG_FILE"
 
 # --- Completion
 echo
