@@ -221,7 +221,7 @@ echo "++++++++++Creating README++++++++++"
 echo "Creating README.md..."
 
 README_PATH="$BASE_DIR/README.md"
-echo "# Setup Summary & Useful Commands" > "$README_PATH"
+echo "# Useful Commands" > "$README_PATH"
 echo "" >> "$README_PATH"
 
 if [ "$ENV_TOOL" = "conda" ]; then
