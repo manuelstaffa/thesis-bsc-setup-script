@@ -7,7 +7,7 @@ Features
 1. Automatic dependency check & installation
 2. Choose an install location and automatically clear target folder
 3. Choose between conda or .venv, including the option to replace existing environments
-4. Choose different modules (gymnasium+AutoROM+ale_py, HackAtari, OC_Atari, oc_cleanrl, PyTorch ROCm (AMD GPU support) to install
+4. Choose different modules (gymnasium+AutoROM+ale_py, HackAtari, OC_Atari, oc_cleanrl, PyTorch ROCm (AMD GPU support)) to install
 5. Git SSH installation with automatic HTTPS fallback
 6. README.md creation containing some useful commands
 7. Log file for installation process
