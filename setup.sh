@@ -255,7 +255,6 @@ echo "\`\`\`" >> "$README_PATH"
 
 echo "## ALE & Gymnasium Test" >> "$README_PATH"
 echo "\`\`\`bash" >> "$README_PATH"
-echo "python -m ale_py.example" >> "$README_PATH"
 echo "python -c \"import gymnasium; print(gymnasium.make('ALE/Freeway-v5'))\"" >> "$README_PATH"
 echo "\`\`\`" >> "$README_PATH"
 
