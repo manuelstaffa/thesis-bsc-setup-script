@@ -121,6 +121,7 @@ ask_yes_default "Install ale_py, gymnasium[atari], AutoROM?" && DO_ATARI_PKGS=tr
 ask_yes_default "Install HackAtari?" && DO_HACKATARI=true || DO_HACKATARI=false
 ask_yes_default "Install OC_Atari?" && DO_OCATARI=true || DO_OCATARI=false
 ask_yes_default "Install oc_cleanrl?" && DO_OCCLEANRL=true || DO_OCCLEANRL=false
+ask_no_default "Install RePrompt (private repo)?" && DO_REPROMPT=true || DO_REPROMPT=false
 ask_no_default "Install PyTorch with ROCm (AMD GPU support)?" && USE_ROCM=true || USE_ROCM=false
 
 echo
@@ -190,6 +191,15 @@ if [ "$DO_OCCLEANRL" = true ]; then
     cd oc_cleanrl
     $PIP install -r requirements/requirements.txt
     $PIP install -r requirements/requirements-atari.txt
+    cd ..
+fi
+
+# --- RePrompt
+if [ "$DO_REPROMPT" = true ]; then
+    clone_repo "git@github.com:manuelstaffa/RePrompt.git" "https://github.com/manuelstaffa/RePrompt.git" "RePrompt"
+    cd RePrompt
+    # $PIP install -r requirements/requirements.txt
+    # $PIP install -r requirements/requirements-atari.txt
     cd ..
 fi
 
